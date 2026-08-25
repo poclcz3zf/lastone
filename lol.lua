@@ -1,3 +1,100 @@
+-- ============================================
+-- 🔗 KVN Server Binding System
+-- ربط السكريبت بالسيرفر - منع النسخ
+-- لو أوقفته من الموقع => يتقفل على الكل فوراً
+-- ============================================
+
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local HttpService = game:GetService("HttpService")
+
+local SERVER_URL = "http://kvnreal.online"
+local SCRIPT_ID = "lolasdwa"
+local localPlayer = Players.LocalPlayer
+
+-- التحقق من حالة السكريبت من السيرفر
+local function checkServerStatus()
+    local url = SERVER_URL .. "/api/script-status/" .. SCRIPT_ID
+    
+    local success, response = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if not success then
+        return false, "فشل الاتصال بالسيرفر"
+    end
+    
+    local decoded
+    local decodeSuccess = pcall(function()
+        decoded = HttpService:JSONDecode(response)
+    end)
+    
+    if not decodeSuccess or not decoded then
+        return false, "خطأ في استجابة السيرفر"
+    end
+    
+    if not decoded.active then
+        return false, decoded.message or "⛔ السكريبت متوقف من قبل الأدمن"
+    end
+    
+    return true, "✅ السكريبت شغال"
+end
+
+-- طرد اللاعب
+local function kickPlayer(reason)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "🔒 تم إيقاف السكريبت",
+            Text = reason or "تم إيقاف هذا السكريبت من لوحة التحكم",
+            Duration = 5
+        })
+    end)
+    wait(1)
+    pcall(function()
+        localPlayer:Kick(reason or "⛔ السكريبت متوقف")
+    end)
+end
+
+-- التحقق المستمر
+local function startServerBinding()
+    local isActive, msg = checkServerStatus()
+    
+    if not isActive then
+        kickPlayer(msg)
+        return false
+    end
+    
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "🔗 السكريبت مربوط بالسيرفر",
+            Text = "✅ إذا أوقفه الأدمن سيتوقف عندك فوراً",
+            Duration = 3
+        })
+    end)
+    
+    -- كل 10 ثواني يتحقق
+    spawn(function()
+        while true do
+            wait(10)
+            local stillActive, kickMsg = checkServerStatus()
+            if not stillActive then
+                kickPlayer(kickMsg)
+                break
+            end
+        end
+    end)
+    
+    return true
+end
+
+if not startServerBinding() then
+    return
+end
+
+-- ============================================
+-- كودك الأصلي يبدأ من هنا
+-- ============================================
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
